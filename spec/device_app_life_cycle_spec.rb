@@ -28,10 +28,10 @@ describe "app life cycle (physical device)" do
     IDM::Resources.instance.with_developer_dir(developer_dir) do
       # Add a simulator to this list of of devices
       devices = IDM::Resources.instance.physical_devices
-      xcode_version = developer_dir[/(\d+\.\d+(\.\d+)?)/]
+      xcode_version = RunLoop::Xcode.new.version
       if devices.empty?
         it "Xcode #{xcode_version} no compatible devices connected via USB" do
-          expect(true).to be == true
+          expect(true).to be true
         end
       else
 

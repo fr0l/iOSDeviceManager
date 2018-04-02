@@ -61,13 +61,14 @@ context "clear-app-data command" do
       IDM::Resources.instance.with_developer_dir(developer_dir) do
         # Add a simulator to this list of of devices
         devices = IDM::Resources.instance.physical_devices
-        xcode_version = developer_dir[/(\d+\.\d+(\.\d+)?)/]
+        xcode_version = RunLoop::Xcode.new.version
         if devices.empty?
           it "Xcode #{xcode_version} no compatible devices connected via USB" do
             expect(true).to be_truthy
           end
         else
           context "#{developer_dir}" do
+
             let(:app) { RunLoop::App.new(IDM::Resources.instance.test_app(:arm)) }
             # For every connected (compatible) device
             devices.each do |device|

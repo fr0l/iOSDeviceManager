@@ -83,6 +83,13 @@ module IDM
       end
     end
 
+    # ENV["DEVELOPER_DIR"]
+    def default_simulator_for_active_xcode
+      RunLoop::Simctl.news.simulators.detect do |sim|
+        sim.instruments_identifier(xcode) == RunLoop::Core.default_simulator
+      end
+    end
+
     def random_iphone
       simctl.simulators.select do |sim|
         sim.name[/iPhone/] &&
@@ -93,16 +100,6 @@ module IDM
 
     def instruments
       RunLoop::Instruments.new
-    end
-
-    def physical_devices
-      instruments.physical_devices.select do |device|
-        device.compatible_with_xcode_version?(instruments.xcode.version)
-      end
-    end
-
-    def physical_device_connected?
-      !physical_devices.empty?
     end
 
     def test_app(type)
@@ -166,10 +163,27 @@ module IDM
         ENV['DEVELOPER_DIR'] = original_developer_dir
       end
     end
+<<<<<<< HEAD
 
     def xcode_install_paths
       @xcode_install_paths ||= begin
         min_xcode_version = RunLoop::Version.new("8.3.3")
+        Dir.glob('/Xcode/*/*.app/Contents/Developer').map do |path|
+          xcode_version = path[/(\d+\.\d+(\.\d+)?)/]
+          if RunLoop::Version.new(xcode_version) >= min_xcode_version
+            path
+          else
+            nil
+          end
+        end
+      end.compact
+    end
+
+=======
+
+    def xcode_install_paths
+      @xcode_install_paths ||= begin
+                                 min_xcode_version = RunLoop::Version.new("9.4.1")
         Dir.glob('/Xcode/*/*.app/Contents/Developer').map do |path|
           xcode_version = path[/(\d+\.\d+(\.\d+)?)/]
           if RunLoop::Version.new(xcode_version) >= min_xcode_version
@@ -189,6 +203,33 @@ module IDM
       end
     end
 
+    def physical_devices
+      instruments = RunLoop::Instruments.new
+      xcode_version = instruments.xcode.version
+
+      instruments.physical_devices.select do |device|
+        device.compatible_with_xcode_version?(xcode_version)
+      end
+    end
+
+    def default_physical_device
+      if @default_physical_device == :no_device_connected
+        return nil
+      elsif @default_physical_device
+        return @default_physical_device
+      end
+
+      devices = physical_devices_for_testing.sort do |a, b|
+        -(a.version <=> b.version)
+      end
+
+      if devices.empty?
+        @default_physical_device = :no_device_connected
+      else
+        @default_physical_device = devices.first
+      end
+    end
+
     def xcappdata
       appdata = File.join(tmp_dir("xcappdata"), "New.xcappdata")
       args = ["generate-xcappdata", appdata]
@@ -197,9 +238,7 @@ module IDM
       if hash[:exit_status] != 0
         raise %Q[
 Expected generate-xcappdata to exit with 0 found: #{hash[:exit_status]}
-
 #{hash[:out]}
-
 ]
       end
 
